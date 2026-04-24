@@ -596,6 +596,15 @@ function renderModule(moduleId) {
 // 模块1：系统首页仪表盘
 // ================================================================
 function renderDashboard() {
+  // 动态计算KPI
+  const totalRevenue = DB.salesOrders.reduce((sum, o) => sum + o.totalAmount, 0);
+  const totalPurchase = DB.purchaseOrders.reduce((sum, p) => sum + p.amount, 0);
+  const activeOrders = DB.salesOrders.filter(o => o.status === '生产中' || o.status === '已审核').length;
+  const unpaidTotal = DB.receivable.reduce((sum, r) => sum + r.unpaidAmount, 0);
+  const overdueTotal = DB.receivable.filter(r => r.status === '已逾期').reduce((sum, r) => sum + r.unpaidAmount, 0);
+  const pendingTodos = DB.todos.filter(t => t.status === '待处理').length;
+  const unreadNotify = DB.notifications.filter(n => !n.isRead).length;
+
   const content = document.getElementById('pageContent');
   content.innerHTML = `
     <div class="dashboard">
@@ -604,7 +613,7 @@ function renderDashboard() {
         <div class="stat-card blue">
           <div class="stat-icon"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg></div>
           <div class="stat-info">
-            <div class="stat-num">¥328.5<span>万</span></div>
+            <div class="stat-num">¥${(totalRevenue/10000).toFixed(1)}<span>万</span></div>
             <div class="stat-label">本月销售总额</div>
             <div class="stat-trend up">↑ 12.3%</div>
           </div>
@@ -612,7 +621,7 @@ function renderDashboard() {
         <div class="stat-card amber">
           <div class="stat-icon"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 01-8 0"/></svg></div>
           <div class="stat-info">
-            <div class="stat-num">¥86.2<span>万</span></div>
+            <div class="stat-num">¥${(totalPurchase/10000).toFixed(1)}<span>万</span></div>
             <div class="stat-label">本月采购总额</div>
             <div class="stat-trend down">↓ 3.1%</div>
           </div>
@@ -620,17 +629,17 @@ function renderDashboard() {
         <div class="stat-card green">
           <div class="stat-icon"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14.7 6.3a1 1 0 000 1.4l1.6 1.6a1 1 0 001.4 0l3.77-3.77a6 6 0 01-7.94 7.94l-6.91 6.91a2.12 2.12 0 01-3-3l6.91-6.91a6 6 0 017.94-7.94l-3.76 3.76z"/></svg></div>
           <div class="stat-info">
-            <div class="stat-num">156</div>
-            <div class="stat-label">本月生产订单</div>
-            <div class="stat-trend up">↑ 8.5%</div>
+            <div class="stat-num">${activeOrders}</div>
+            <div class="stat-label">在产/待产订单</div>
+            <div class="stat-trend up">↑ ${DB.productionPlans.filter(p => p.status === '执行中').length}个执行中</div>
           </div>
         </div>
         <div class="stat-card red">
           <div class="stat-icon"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg></div>
           <div class="stat-info">
-            <div class="stat-num">¥52.3<span>万</span></div>
+            <div class="stat-num">¥${(unpaidTotal/10000).toFixed(1)}<span>万</span></div>
             <div class="stat-label">应收账款</div>
-            <div class="stat-trend warn">⚠ 超期12.5万</div>
+            <div class="stat-trend ${overdueTotal > 0 ? 'warn' : 'up'}">${overdueTotal > 0 ? '⚠ 超期' + (overdueTotal/10000).toFixed(1) + '万' : '无逾期'}</div>
           </div>
         </div>
       </div>
@@ -655,71 +664,83 @@ function renderDashboard() {
         </div>
       </div>
 
-      <!-- 生产进度 + 待办 -->
+      <!-- 待办 + 消息 -->
       <div class="dashboard-bottom">
         <div class="panel">
           <div class="panel-header">
-            <h3>生产进度跟踪</h3>
-            <a href="javascript:navigateTo('production')" class="panel-more">更多 →</a>
-          </div>
-          <div class="production-list" id="dashboardProductionList"></div>
-        </div>
-        <div class="panel">
-          <div class="panel-header">
-            <h3>待办事项</h3>
-            <span class="panel-badge" id="todoCount">5</span>
+            <h3>待办中心</h3>
+            <span class="panel-badge">${pendingTodos} 待处理</span>
           </div>
           <div class="todo-list" id="todoList"></div>
         </div>
+        <div class="panel">
+          <div class="panel-header">
+            <h3>消息通知</h3>
+            <span class="panel-badge" style="background:#f59e0b">${unreadNotify} 未读</span>
+          </div>
+          <div class="todo-list" id="notifyList"></div>
+        </div>
+      </div>
+
+      <!-- KPI指标卡 -->
+      <div class="panel" style="margin-top:16px">
+        <div class="panel-header">
+          <h3>经营KPI指标</h3>
+          <span style="font-size:12px;color:var(--color-text-muted)">数据更新：2026-04-23</span>
+        </div>
+        <div class="boss-kpis" id="bossKpis"></div>
       </div>
 
       <!-- 最新动态 -->
       <div class="panel" style="margin-top:16px">
-        <div class="panel-header"><h3>最新订单动态</h3></div>
+        <div class="panel-header"><h3>最新销售订单</h3></div>
         <div id="latestOrders"></div>
       </div>
     </div>`;
 
-  // 填充生产进度
-  const productions = DB.productionOrders.slice(0, 5);
-  document.getElementById('dashboardProductionList').innerHTML = productions.map(p => `
-    <div class="production-item" onclick="navigateTo('production'); setTimeout(()=>renderProductionOrderDetail('${p.orderId}'),300)">
-      <div class="pi-top">
-        <span class="pi-id">${p.orderId}</span>
-        <span class="pi-status ${getStatusClass(p.status)}">${p.status}</span>
+  // 待办事项（从真实数据）
+  document.getElementById('todoList').innerHTML = DB.todos.filter(t => t.status === '待处理').slice(0, 6).map(t => `
+    <div class="todo-item ${t.priority === '高' ? 'high' : t.priority === '中' ? 'medium' : 'low'}">
+      <div class="todo-check" onclick="this.classList.toggle('checked')"></div>
+      <div class="todo-content">
+        <div class="todo-title">${t.title}</div>
+        <div class="todo-meta">${t.todoType} · ${t.creator} · ${t.createTime}</div>
       </div>
-      <div class="pi-progress">
-        <div class="progress-bar"><div class="progress-fill" style="width:${p.progress}%"></div></div>
-        <span class="progress-text">${p.progress}%</span>
-      </div>
-      <div class="pi-meta">${p.productName} · ${p.quantity}件 · ${p.deadline}</div>
     </div>`).join('');
 
-  // 待办事项
-  const todos = [
-    { text:'审核客户「华北石化设备厂」的新报价单', priority:'high' },
-    { text:'跟进订单 ORD-202604-035 的生产进度', priority:'high' },
-    { text:'确认供应商「兴华钢材」的材料到货时间', priority:'medium' },
-    { text:'完成本月销售报表并发送给老板', priority:'medium' },
-    { text:'更新法兰规格库的基础数据', priority:'low' }
-  ];
-  document.getElementById('todoList').innerHTML = todos.map(t => `
-    <div class="todo-item ${t.priority}">
-      <div class="todo-check" onclick="this.classList.toggle('checked')"></div>
-      <span class="todo-text">${t.text}</span>
+  // 消息通知（从真实数据）
+  document.getElementById('notifyList').innerHTML = DB.notifications.slice(0, 6).map(n => `
+    <div class="todo-item ${n.isRead ? 'low' : 'high'}">
+      <div class="todo-check ${n.isRead ? 'checked' : ''}" style="pointer-events:none"></div>
+      <div class="todo-content">
+        <div class="todo-title">${n.content}</div>
+        <div class="todo-meta">${n.notifyType} · ${n.roles} · ${n.time}</div>
+      </div>
+    </div>`).join('');
+
+  // KPI指标
+  const kpiColors = ['blue','green','amber','red','green','red','green','green','blue','blue','red','red'];
+  document.getElementById('bossKpis').innerHTML = DB.kpis.slice(0, 8).map((k, i) => `
+    <div class="kpi-card">
+      <div class="kpi-name">${k.kpiName}</div>
+      <div class="kpi-value">${k.currentValue}</div>
+      <div class="kpi-meta">
+        ${k.targetValue !== '-' ? `目标: ${k.targetValue} · 达成 ${k.achieveRate}%` : ''}
+        ${k.mom !== '-' ? `<span class="${k.trend === 'up' ? 'up' : k.trend === 'down' ? 'down' : ''}"> ${k.mom > 0 ? '↑' : k.mom < 0 ? '↓' : ''} ${k.mom !== '-' ? Math.abs(k.mom) + '%' : ''}</span>` : ''}
+      </div>
     </div>`).join('');
 
   // 最新订单
   document.getElementById('latestOrders').innerHTML = `
     <table class="data-table">
-      <thead><tr><th>订单编号</th><th>客户</th><th>产品</th><th>金额</th><th>状态</th><th>创建时间</th></tr></thead>
-      <tbody>${DB.salesOrders.slice(0,5).map(o => `<tr>
+      <thead><tr><th>订单编号</th><th>客户</th><th>金额</th><th>交期</th><th>状态</th><th>销售员</th></tr></thead>
+      <tbody>${DB.salesOrders.slice(0, 8).map(o => `<tr>
         <td><a href="javascript:void(0)" onclick="viewSalesOrder('${o.orderId}')">${o.orderId}</a></td>
         <td>${o.customerName}</td>
-        <td>${o.productName}</td>
         <td class="money">¥${formatMoney(o.totalAmount)}</td>
+        <td>${o.deliveryDate}</td>
         <td><span class="status-badge ${getStatusClass(o.status)}">${o.status}</span></td>
-        <td>${o.createTime}</td>
+        <td>${o.salesPerson}</td>
       </tr>`).join('')}</tbody>
     </table>`;
 
@@ -797,65 +818,52 @@ function switchBasicTab(tab) {
     b.classList.toggle('active', ['customers','suppliers','employees','materials','products','processes','outsource','settings'][i] === tab);
   });
   const configs = {
-    customers: { title:'客户管理', fields:['customerId','customerName','contactPerson','contactPhone','customerAddress','cooperationType','remark','status'], headers:['客户编号','客户名称','联系人','联系电话','地址','合作类型','备注','状态'], data:DB.customers, addFields:[
+    customers: { title:'客户管理', fields:['customerId','customerName','contactPerson','contactPhone','cooperationType','creditLimit','paymentDays','status'], headers:['客户编码','客户名称','联系人','电话','合作类型','信用额度(元)','账期(天)','状态'], data:DB.customers, addFields:[
       {name:'customerName',label:'客户名称',type:'text',required:true},
       {name:'contactPerson',label:'联系人',type:'text',required:true},
       {name:'contactPhone',label:'联系电话',type:'text',required:true},
-      {name:'customerAddress',label:'地址',type:'text'},
-      {name:'cooperationType',label:'合作类型',type:'select',options:['长期','临时']},
-      {name:'remark',label:'备注',type:'textarea'}
+      {name:'cooperationType',label:'合作类型',type:'select',options:['长期','项目制','年度协议','零星','战略合作']}
     ]},
-    suppliers: { title:'供应商管理', fields:['supplierId','supplierName','contactPerson','contactPhone','supplierAddress','mainSupply','cooperationType','remark','status'], headers:['供应商编号','供应商名称','联系人','联系电话','地址','主营供应','合作类型','备注','状态'], data:DB.suppliers, addFields:[
+    suppliers: { title:'供应商管理', fields:['supplierId','supplierName','contactPerson','contactPhone','supplyMaterial','cooperationStatus','paymentDays','status'], headers:['供应商编码','供应商名称','联系人','电话','供应物料','合作状态','账期(天)','状态'], data:DB.suppliers, addFields:[
       {name:'supplierName',label:'供应商名称',type:'text',required:true},
       {name:'contactPerson',label:'联系人',type:'text',required:true},
       {name:'contactPhone',label:'联系电话',type:'text',required:true},
-      {name:'supplierAddress',label:'地址',type:'text'},
-      {name:'mainSupply',label:'主营供应',type:'text'},
-      {name:'cooperationType',label:'合作类型',type:'select',options:['长期','临时']},
-      {name:'remark',label:'备注',type:'textarea'}
+      {name:'supplyMaterial',label:'供应物料',type:'text'},
+      {name:'cooperationStatus',label:'合作状态',type:'select',options:['正常','暂停','终止']}
     ]},
-    employees: { title:'员工管理', fields:['employeeId','employeeName','gender','department','position','phone','idCard','joinDate','status'], headers:['员工编号','姓名','性别','部门','职位','手机号','身份证号','入职日期','状态'], data:DB.employees, addFields:[
+    employees: { title:'员工管理', fields:['employeeId','employeeName','department','position','role','skillType','unitPrice','hireDate','status'], headers:['员工编码','姓名','部门','岗位','角色','工种','计件单价','入职日期','状态'], data:DB.employees, addFields:[
       {name:'employeeName',label:'姓名',type:'text',required:true},
-      {name:'gender',label:'性别',type:'select',options:['男','女']},
-      {name:'department',label:'部门',type:'select',options:['生产部','销售部','采购部','财务部','行政部','技术部']},
-      {name:'position',label:'职位',type:'text',required:true},
+      {name:'department',label:'部门',type:'select',options:['生产部','销售部','采购部','财务部','仓储部','质量部','信息部']},
+      {name:'position',label:'岗位',type:'text',required:true},
       {name:'phone',label:'手机号',type:'text',required:true},
-      {name:'idCard',label:'身份证号',type:'text'},
-      {name:'joinDate',label:'入职日期',type:'date',required:true}
+      {name:'role',label:'角色',type:'select',options:['admin','boss','sales','purchase','warehouse','production','finance','quality']}
     ]},
-    materials: { title:'物料档案', fields:['materialId','materialName','spec','unit','unitPrice','supplier','category','safetyStock','remark'], headers:['物料编号','物料名称','规格','单位','单价','供应商','类别','安全库存','备注'], data:DB.materials, addFields:[
+    materials: { title:'物料档案', fields:['materialId','materialName','category','dnSize','pnRating','material','unit','stockQty','safeQty','price','batchManage','status'], headers:['物料编码','名称','类别','DN口径','PN等级','材质','单位','当前库存','安全库存','单价','批次管理','状态'], data:DB.materials, addFields:[
       {name:'materialName',label:'物料名称',type:'text',required:true},
-      {name:'spec',label:'规格',type:'text',required:true},
-      {name:'unit',label:'单位',type:'text',required:true},
-      {name:'unitPrice',label:'单价',type:'number',required:true},
-      {name:'supplier',label:'供应商',type:'text'},
-      {name:'category',label:'类别',type:'select',options:['钢材','防腐材料','保温材料','管件','紧固件','其他']},
-      {name:'safetyStock',label:'安全库存',type:'number'},
-      {name:'remark',label:'备注',type:'textarea'}
-    ]},
-    products: { title:'产品管理', fields:['productId','productName','spec','unit','price','bom','processRoute','remark'], headers:['产品编号','产品名称','规格','单位','单价','BOM','工艺路线','备注'], data:DB.products, addFields:[
-      {name:'productName',label:'产品名称',type:'text',required:true},
+      {name:'category',label:'类别',type:'select',options:['原材料','半成品','成品','辅材']},
       {name:'spec',label:'规格',type:'text',required:true},
       {name:'unit',label:'单位',type:'text',required:true},
       {name:'price',label:'单价',type:'number',required:true},
-      {name:'bom',label:'BOM（物料构成）',type:'textarea'},
-      {name:'processRoute',label:'工艺路线',type:'textarea'},
-      {name:'remark',label:'备注',type:'textarea'}
+      {name:'safeQty',label:'安全库存',type:'number'}
     ]},
-    processes: { title:'工序管理', fields:['processId','processName','processNo','department','standardHours','remark'], headers:['工序编号','工序名称','工序顺序','负责部门','标准工时(h)','备注'], data:DB.processes, addFields:[
+    products: { title:'成品管理', fields:['productId','productName','spec','antiCorrosionLevel','material','unit','costPrice','salePrice','bomVersion','dnSize','pnRating','status'], headers:['产品编码','产品名称','规格','防腐等级','材质','单位','成本价','售价','BOM版本','DN口径','PN等级','状态'], data:DB.products, addFields:[
+      {name:'productName',label:'产品名称',type:'text',required:true},
+      {name:'spec',label:'规格型号',type:'text',required:true},
+      {name:'unit',label:'单位',type:'text',required:true},
+      {name:'costPrice',label:'成本价',type:'number',required:true},
+      {name:'salePrice',label:'售价',type:'number',required:true}
+    ]},
+    processes: { title:'工艺路线', fields:['seq','processNo','processName','workCenter','stdHours','isKey','canOutsource','prevProcess'], headers:['序号','工序号','工序名称','工作中心','标准工时(min)','关键工序','可外协','前置工序'], data:DB.processRoutes, addFields:[
       {name:'processName',label:'工序名称',type:'text',required:true},
-      {name:'processNo',label:'工序顺序',type:'number',required:true},
-      {name:'department',label:'负责部门',type:'select',options:['生产部','技术部','质检部']},
-      {name:'standardHours',label:'标准工时(h)',type:'number',required:true},
-      {name:'remark',label:'备注',type:'textarea'}
+      {name:'processNo',label:'工序号',type:'text',required:true},
+      {name:'workCenter',label:'工作中心',type:'text'},
+      {name:'stdHours',label:'标准工时',type:'number',required:true}
     ]},
-    outsource: { title:'外协厂家管理', fields:['factoryId','factoryName','contactPerson','contactPhone','address','capability','remark','status'], headers:['外协编号','厂家名称','联系人','联系电话','地址','加工能力','备注','状态'], data:DB.outsourceFactories, addFields:[
-      {name:'factoryName',label:'厂家名称',type:'text',required:true},
-      {name:'contactPerson',label:'联系人',type:'text',required:true},
-      {name:'contactPhone',label:'联系电话',type:'text',required:true},
-      {name:'address',label:'地址',type:'text'},
-      {name:'capability',label:'加工能力',type:'textarea'},
-      {name:'remark',label:'备注',type:'textarea'}
+    outsource: { title:'委外订单', fields:['osId','vendorName','process','material','qty','unit','sendDate','expectReturn','status'], headers:['委外单号','外协厂商','工序','物料','数量','单位','发出日期','计划回收','状态'], data:DB.outsourceOrders, addFields:[
+      {name:'vendorName',label:'外协厂商',type:'text',required:true},
+      {name:'process',label:'工序',type:'text',required:true},
+      {name:'qty',label:'数量',type:'number',required:true},
+      {name:'unit',label:'单位',type:'text',required:true}
     ]},
     settings: { title:'系统设置', fields:[], headers:[], data:[], isSettings:true }
   };
@@ -1149,16 +1157,15 @@ function renderSalesQuotes() {
 }
 
 function renderSalesOrders() {
-  const fields = ['orderId','customerName','productName','spec','quantity','unitPrice','totalAmount','deadline','status','createTime'];
-  const headers = ['订单编号','客户','产品名称','规格','数量','单价','订单金额','交货日期','状态','创建时间'];
+  const fields = ['orderId','customerName','totalAmount','deliveryDate','status','salesPerson','quoteRef'];
+  const headers = ['订单编号','客户','订单金额','要求交期','状态','销售员','关联报价单'];
   document.getElementById('tabContent').innerHTML = renderListPage('销售订单', fields, headers, DB.salesOrders, 'sales_orders', [
     {name:'customerName',label:'客户名称',type:'text',required:true},
     {name:'productName',label:'产品名称',type:'text',required:true},
-    {name:'spec',label:'规格',type:'text'},
-    {name:'quantity',label:'数量',type:'number',required:true},
-    {name:'unitPrice',label:'单价',type:'number',required:true},
-    {name:'deadline',label:'交货日期',type:'date',required:true},
-    {name:'remark',label:'备注',type:'textarea'}
+    {name:'totalAmount',label:'订单金额',type:'number',required:true},
+    {name:'deliveryDate',label:'要求交期',type:'date',required:true},
+    {name:'salesPerson',label:'销售员',type:'text',required:true},
+    {name:'status',label:'状态',type:'select',options:['待审核','已审核','生产中','已完成','已发货','逾期','已关闭']}
   ]);
 }
 
@@ -1509,8 +1516,8 @@ function renderProductionInboundContent() {
 
 function renderProductionKanbanContent() {
   const content = document.getElementById('pageContent');
-  const stats = { '待生产':0, '生产中':0, '待发货':0, '已完成':0 };
-  DB.productionOrders.forEach(o => { if (stats[o.status] !== undefined) stats[o.status]++; });
+  const stats = { '待确认':0, '执行中':0, '已派工':0, '已完成':0 };
+  DB.productionPlans.forEach(o => { if (stats[o.status] !== undefined) stats[o.status]++; });
 
   // 甘特图时间轴（未来30天 + 过去10天 = 40天窗口）
   const today = new Date();
@@ -1577,22 +1584,19 @@ function renderProductionKanbanContent() {
     </div>`;
 
   // 填充看板卡片
-  ['待生产','生产中','待发货','已完成'].forEach(status => {
-    const orders = DB.productionOrders.filter(o => o.status === status);
+  ['待确认','执行中','已派工','已完成'].forEach(status => {
+    const orders = DB.productionPlans.filter(o => o.status === status);
     document.getElementById(`kanban_${status}`).innerHTML = orders.map(o => `
-      <div class="kanban-card" onclick="viewProductionOrderDetail('${o.orderId}')">
+      <div class="kanban-card" onclick="viewProductionOrderDetail('${o.planId}')">
         <div class="kc-top">
-          <span class="kc-id">${o.orderId}</span>
-          <span class="kc-priority ${o.priority==='高'?'high':(o.priority==='中'?'medium':'low')}">${o.priority}优</span>
+          <span class="kc-id">${o.planId}</span>
+          <span class="kc-priority">${o.qty}${o.unit}</span>
         </div>
         <div class="kc-product">${o.productName}</div>
-        <div class="kc-meta">${o.spec} · ${o.quantity}件</div>
+        <div class="kc-meta">${o.orderId} · ${o.startDate} ~ ${o.endDate}</div>
         <div class="kc-progress">
           <div class="progress-bar"><div class="progress-fill" style="width:${o.progress}%"></div></div>
           <span>${o.progress}%</span>
-        </div>
-        <div class="kc-footer">
-          <span class="kc-deadline">📅 ${o.deadline}</span>
         </div>
       </div>`).join('') || '<div class="kanban-empty">暂无</div>';
   });
@@ -1600,8 +1604,8 @@ function renderProductionKanbanContent() {
   // 填充甘特图行
   const ganttRows = document.getElementById('ganttRows');
   ganttRows.innerHTML = DB.productionPlans.map(plan => {
-    const order = DB.productionOrders.find(o => o.salesOrderId === plan.orderId) || {};
-    const startDate = new Date(plan.startDate);
+    const barColor = plan.status === '已完成' ? '#10b981' : (plan.status === '执行中' || plan.status === '已派工' ? '#f59e0b' : '#3b82f6');
+    const startDate = new Date(plan.startDate === '-' ? today : plan.startDate);
     const endDate = new Date(plan.endDate);
     const startOffset = Math.max(0, Math.ceil((startDate - start) / 86400000));
     const duration = Math.max(1, Math.ceil((endDate - startDate) / 86400000));
@@ -1633,31 +1637,29 @@ function switchKanbanView(view) {
   document.getElementById('viewGantt').classList.toggle('active', view === 'gantt');
 }
 
-function viewProductionOrderDetail(orderId) {
-  const order = DB.productionOrders.find(o => o.orderId === orderId);
-  if (!order) return;
-  const plan = DB.productionPlans.find(p => p.orderId === order.salesOrderId);
-  const dispatches = DB.productionDispatches.filter(d => d.planId === (plan ? plan.planId : ''));
+function viewProductionOrderDetail(planId) {
+  const plan = DB.productionPlans.find(p => p.planId === planId);
+  if (!plan) return;
+  const dispatches = DB.productionDispatches.filter(d => d.planId === planId);
 
   const modal = document.getElementById('modal');
-  document.getElementById('modalTitle').textContent = '生产订单详情 - ' + orderId;
+  document.getElementById('modalTitle').textContent = '生产计划详情 - ' + planId;
   document.getElementById('modalBody').innerHTML = `
     <div class="form-grid view-mode">
-      <div class="form-item"><label>订单编号</label><div class="view-value">${order.orderId}</div></div>
-      <div class="form-item"><label>销售订单</label><div class="view-value">${order.salesOrderId}</div></div>
-      <div class="form-item"><label>产品名称</label><div class="view-value">${order.productName}</div></div>
-      <div class="form-item"><label>规格</label><div class="view-value">${order.spec}</div></div>
-      <div class="form-item"><label>数量</label><div class="view-value">${order.quantity}件</div></div>
-      <div class="form-item"><label>状态</label><div class="view-value"><span class="status-badge ${getStatusClass(order.status)}">${order.status}</span></div></div>
-      <div class="form-item"><label>优先级</label><div class="view-value">${order.priority}优先级</div></div>
-      <div class="form-item"><label>交货日期</label><div class="view-value">${order.deadline}</div></div>
+      <div class="form-item"><label>计划单号</label><div class="view-value">${plan.planId}</div></div>
+      <div class="form-item"><label>关联订单</label><div class="view-value">${plan.orderId}</div></div>
+      <div class="form-item"><label>产品</label><div class="view-value">${plan.productName}</div></div>
+      <div class="form-item"><label>数量</label><div class="view-value">${plan.qty} ${plan.unit}</div></div>
+      <div class="form-item"><label>计划开始</label><div class="view-value">${plan.startDate}</div></div>
+      <div class="form-item"><label>计划完成</label><div class="view-value">${plan.endDate}</div></div>
+      <div class="form-item"><label>状态</label><div class="view-value"><span class="status-badge ${getStatusClass(plan.status)}">${plan.status}</span></div></div>
       <div class="form-item"><label>完成进度</label><div class="view-value">
-        <div class="progress-bar" style="margin:4px 0"><div class="progress-fill" style="width:${order.progress}%"></div></div>
-        ${order.progress}%
+        <div class="progress-bar" style="margin:4px 0"><div class="progress-fill" style="width:${plan.progress}%"></div></div>
+        ${plan.progress}%
       </div></div>
       <div class="form-item full-width"><label>派工明细</label><div class="view-value">
-        <table class="data-table"><thead><tr><th>派工单号</th><th>工序</th><th>派工人</th><th>数量</th><th>状态</th></tr></thead><tbody>
-          ${dispatches.map(d => `<tr><td>${d.dispatchId}</td><td>${d.processName}</td><td>${d.employeeName}</td><td>${d.quantity}</td><td><span class="status-badge ${getStatusClass(d.status)}">${d.status}</span></td></tr>`).join('') || '<tr><td colspan="5">暂无派工记录</td></tr>'}
+        <table class="data-table"><thead><tr><th>派工单号</th><th>工序</th><th>工作中心</th><th>数量</th><th>班组长</th><th>状态</th></tr></thead><tbody>
+          ${dispatches.map(d => `<tr><td>${d.dispatchId}</td><td>${d.process}</td><td>${d.workCenter}</td><td>${d.qty}${d.unit}</td><td>${d.leader}</td><td><span class="status-badge ${getStatusClass(d.status)}">${d.status}</span></td></tr>`).join('') || '<tr><td colspan="6">暂无派工记录</td></tr>'}
         </tbody></table>
       </div></div>
     </div>`;
