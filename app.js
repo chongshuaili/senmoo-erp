@@ -133,6 +133,24 @@ const SIDEBAR_CONFIG = [
     ]
   },
   {
+    id: 'quality', name: '质量管理', icon: 'check-circle', groups: [
+      { label: '质量管理', items: [
+        { page: 'quality-inspect', name: '检验记录' },
+        { page: 'quality-ng', name: '不合格品' },
+        { page: 'quality-standard', name: '检验标准' },
+      ]}
+    ]
+  },
+  {
+    id: 'resource', name: '资源管理', icon: 'cpu', groups: [
+      { label: '资源管理', items: [
+        { page: 'resource-equipment', name: '设备台账' },
+        { page: 'resource-mold', name: '模具台账' },
+        { page: 'resource-wage', name: '计件工资' },
+      ]}
+    ]
+  },
+  {
     id: 'report', name: '数据看板', icon: 'bar-chart-2', groups: [
       { label: '数据看板', items: [
         { page: 'dash-operation', name: '经营概览' },
@@ -266,6 +284,8 @@ function getPageName(pageId) {
     'inv-alert': '库存预警', 'inv-waste': '废料管理', 'inv-report': '库存报表',
     'fin-account': '应收应付台账', 'fin-cost': '成本核算', 'fin-expense': '费用管理',
     'fin-reconciliation': '对账管理', 'fin-report': '财务报表',
+    'quality-inspect': '检验记录', 'quality-ng': '不合格品', 'quality-standard': '检验标准',
+    'resource-equipment': '设备台账', 'resource-mold': '模具台账', 'resource-wage': '计件工资', 'resource-cost': '成本核算',
     'dash-operation': '经营概览', 'dash-order': '订单看板', 'dash-inventory': '库存看板',
     'dash-finance': '财务看板', 'dash-production': '生产看板', 'dash-custom': '自定义报表',
     'message': '消息通知', 'personal': '个人中心',
@@ -286,6 +306,17 @@ function renderBasicProduct() { currentModule = 'basic'; currentTab = 'products'
 function renderBasicProcess() { currentModule = 'basic'; currentTab = 'processes'; renderBasic(); }
 function renderBasicOutsource() { currentModule = 'basic'; currentTab = 'outsource'; renderBasic(); }
 function renderBasicSystem() { currentModule = 'basic'; currentTab = 'settings'; renderBasic(); renderSettings(); }
+
+// --- 质量管理 ---
+function renderQualityInspect() { currentModule = 'quality'; switchQualityTab('inspect'); }
+function renderQualityNg() { currentModule = 'quality'; switchQualityTab('ng'); }
+function renderQualityStandard() { currentModule = 'quality'; switchQualityTab('standard'); }
+
+// --- 资源管理 ---
+function renderResourceEquipment() { currentModule = 'resource'; switchResourceTab('equipment'); }
+function renderResourceMold() { currentModule = 'resource'; switchResourceTab('mold'); }
+function renderResourceWage() { currentModule = 'resource'; switchResourceTab('wage'); }
+function renderResourceCost() { currentModule = 'resource'; switchResourceTab('cost'); }
 
 // --- 销售管理 ---
 function renderSalesQuote() { currentModule = 'sales'; renderSales(); switchSalesTab('quotes'); }
@@ -452,6 +483,17 @@ function renderPage(pageId) {
   if (pageId === 'dash-production') { renderDashProduction(); return; }
   if (pageId === 'dash-custom') { renderDashCustom(); return; }
 
+  // 质量管理
+  if (pageId === 'quality-inspect') { renderQualityInspect(); return; }
+  if (pageId === 'quality-ng') { renderQualityNg(); return; }
+  if (pageId === 'quality-standard') { renderQualityStandard(); return; }
+
+  // 资源管理
+  if (pageId === 'resource-equipment') { renderResourceEquipment(); return; }
+  if (pageId === 'resource-mold') { renderResourceMold(); return; }
+  if (pageId === 'resource-wage') { renderResourceWage(); return; }
+  if (pageId === 'resource-cost') { renderResourceCost(); return; }
+
   // 系统
   if (pageId === 'message') { renderMessage(); return; }
   if (pageId === 'personal') { renderPersonal(); return; }
@@ -469,6 +511,8 @@ function navigateTo(moduleId) {
     'production': 'prod-plan',
     'inventory': 'inv-overview',
     'finance': 'fin-account',
+    'quality': 'quality-inspect',
+    'resource': 'resource-equipment',
     'report': 'dash-operation',
   };
   navigate(moduleHome[moduleId] || 'home');
@@ -538,6 +582,15 @@ function renderPage(pageId) {
     'dash-finance': renderDashFinance,
     'dash-production': renderDashProduction,
     'dash-custom': renderDashCustom,
+    // 质量管理
+    'quality-inspect': renderQualityInspectContent,
+    'quality-ng': renderQualityNgContent,
+    'quality-standard': renderQualityStandardContent,
+    // 资源管理
+    'resource-equipment': renderResourceEquipmentContent,
+    'resource-mold': renderResourceMoldContent,
+    'resource-wage': renderResourceWageContent,
+    'resource-cost': renderResourceCostContent,
     // 消息与个人
     'message': renderMessage,
     'personal': renderPersonal,
@@ -587,6 +640,8 @@ function renderModule(moduleId) {
     case 'production': renderProduction(); break;
     case 'inventory': renderInventory(); break;
     case 'finance': renderFinance(); break;
+    case 'quality': renderQuality(); break;
+    case 'resource': renderResource(); break;
     case 'report': renderReport(); break;
     default: content.innerHTML = '<div class="page-coming-soon"><h2>功能开发中</h2></div>';
   }
@@ -1242,7 +1297,7 @@ function renderSalesReconcileContent() {
 function renderSalesReceivableContent() {
   const fields = ['receivableId','customerName','orderId','amount','paidAmount','balanceAmount','dueDate','overdueDays','status','remark'];
   const headers = ['应收单号','客户','订单号','应收金额','已收金额','应收余额','到期日','超期天数','状态','备注'];
-  document.getElementById('tabContent').innerHTML = renderListPage('应收账款', fields, headers, DB.financeReceivable.filter(r=>r.direction==='应收'), 'finance_receivable', []);
+  document.getElementById('tabContent').innerHTML = renderListPage('应收账款', fields, headers, DB.receivable, 'finance_receivable', []);
 }
 
 function renderSalesReportContent() {
@@ -1382,11 +1437,10 @@ function renderPurchaseReportContent() {
       <div class="chart-card"><div class="chart-header"><h3>月度采购额（万元）</h3></div><div class="chart-body"><canvas id="reportPurchaseChart"></canvas></div></div>
       <div class="chart-card"><div class="chart-header"><h3>供应商采购排名</h3></div><div class="chart-body"><canvas id="reportSupplierChart"></canvas></div></div>
       <div class="chart-card full"><div class="chart-header"><h3>物料采购明细</h3></div>
-        <table class="data-table"><thead><tr><th>物料名称</th><th>规格</th><th>采购量</th><th>采购额</th><th>占比</th></tr></thead><tbody>
-          ${DB.materials.slice(0,6).map(m => {
-            const qty = Math.floor(Math.random()*200)+50;
-            const amt = qty * m.unitPrice;
-            return `<tr><td>${m.materialName}</td><td>${m.spec}</td><td>${qty}${m.unit}</td><td class="money">¥${formatMoney(amt)}</td><td>${(amt/862000*100).toFixed(1)}%</td></tr>`;
+        <table class="data-table"><thead><tr><th>物料编码</th><th>物料名称</th><th>规格</th><th>库存量</th><th>安全库存</th><th>单价</th></tr></thead><tbody>
+          ${DB.materials.map(m => {
+            const low = m.stockQty < m.safeQty ? 'style="color:#e11d48;font-weight:600"' : '';
+            return `<tr><td>${m.materialId}</td><td>${m.materialName}</td><td>${m.spec || '-'}</td><td class="money" ${low}>${m.stockQty}${m.unit}</td><td>${m.safeQty}${m.unit}</td><td>¥${m.price}</td></tr>`;
           }).join('')}
         </tbody></table>
       </div>
@@ -1444,13 +1498,12 @@ function switchProductionTab(tab) {
 }
 
 function renderProductionPlanContent() {
-  const fields = ['planId','orderId','productName','spec','planQty','unit','startDate','endDate','status','progress','createTime'];
-  const headers = ['计划编号','销售订单','产品名称','规格','数量','计划开始','计划结束','状态','进度','创建时间'];
+  const fields = ['planId','orderId','productName','qty','unit','startDate','endDate','status','progress'];
+  const headers = ['计划编号','销售订单','产品名称','数量','单位','计划开始','计划结束','状态','进度'];
   document.getElementById('tabContent').innerHTML = renderListPage('生产计划', fields, headers, DB.productionPlans, 'production_plan', [
     {name:'salesOrderId',label:'销售订单',type:'text',required:true},
     {name:'productName',label:'产品名称',type:'text',required:true},
-    {name:'spec',label:'规格',type:'text'},
-    {name:'planQty',label:'数量',type:'number',required:true},
+    {name:'qty',label:'数量',type:'number',required:true},
     {name:'startDate',label:'计划开始',type:'date',required:true},
     {name:'endDate',label:'计划结束',type:'date',required:true},
     {name:'remark',label:'备注',type:'textarea'}
@@ -1458,59 +1511,49 @@ function renderProductionPlanContent() {
 }
 
 function renderProductionDispatchContent() {
-  const fields = ['dispatchId','planId','productName','processName','employeeName','quantity','dispatchDate','status','remark'];
-  const headers = ['派工单号','生产计划','工序','派工人','数量','派工日期','状态','备注'];
+  const fields = ['dispatchId','planId','process','workCenter','qty','unit','leader','dispatchDate','status'];
+  const headers = ['派工单号','生产计划','工序','工作中心','数量','单位','班组长','派工日期','状态'];
   document.getElementById('tabContent').innerHTML = renderListPage('生产派工', fields, headers, DB.productionDispatches, 'production_dispatch', [
     {name:'planId',label:'生产计划',type:'text',required:true},
-    {name:'processName',label:'工序',type:'text',required:true},
-    {name:'employeeName',label:'派工人',type:'text',required:true},
-    {name:'quantity',label:'数量',type:'number',required:true},
-    {name:'dispatchDate',label:'派工日期',type:'date',required:true},
-    {name:'remark',label:'备注',type:'textarea'}
+    {name:'process',label:'工序',type:'text',required:true},
+    {name:'qty',label:'数量',type:'number',required:true},
+    {name:'dispatchDate',label:'派工日期',type:'date',required:true}
   ]);
 }
 
 function renderProductionReportContent() {
-  const fields = ['reportId','dispatchId','processName','employeeName','qualifiedQty','rejectQty','reportDate','workingHours','status','remark'];
-  const headers = ['报工单号','派工单号','工序','报工人','合格数','不合格数','报工日期','工时(h)','状态','备注'];
+  const fields = ['reportId','dispatchId','process','worker','qualifiedQty','unqualifiedQty','reportTime','status'];
+  const headers = ['报工单号','派工单号','工序','报工人','合格数','不合格数','报工时间','状态'];
   document.getElementById('tabContent').innerHTML = renderListPage('生产报工', fields, headers, DB.productionReports, 'production_report', [
     {name:'dispatchId',label:'派工单号',type:'text',required:true},
-    {name:'processName',label:'工序',type:'text',required:true},
-    {name:'employeeName',label:'报工人',type:'text',required:true},
+    {name:'process',label:'工序',type:'text',required:true},
+    {name:'worker',label:'报工人',type:'text',required:true},
     {name:'qualifiedQty',label:'合格数',type:'number',required:true},
-    {name:'rejectQty',label:'不合格数',type:'number'},
-    {name:'reportDate',label:'报工日期',type:'date',required:true},
-    {name:'workingHours',label:'工时(h)',type:'number'},
-    {name:'remark',label:'备注',type:'textarea'}
+    {name:'unqualifiedQty',label:'不合格数',type:'number'},
+    {name:'reportTime',label:'报工时间',type:'text',required:true}
   ]);
 }
 
 function renderProductionOutsourceContent() {
-  const fields = ['outsourceId','salesOrderId','productName','factoryName','quantity','outsourceCost','outDate','returnDate','status','remark'];
-  const headers = ['外协单号','销售订单','产品名称','外协厂家','数量','外协费用','发出日期','预计返回','状态','备注'];
-  document.getElementById('tabContent').innerHTML = renderListPage('外协管理', fields, headers, DB.productionOutsource, 'production_outsource_p', [
-    {name:'salesOrderId',label:'销售订单',type:'text',required:true},
-    {name:'productName',label:'产品名称',type:'text',required:true},
-    {name:'factoryName',label:'外协厂家',type:'text',required:true},
-    {name:'quantity',label:'数量',type:'number',required:true},
-    {name:'outsourceCost',label:'外协费用',type:'number',required:true},
-    {name:'outDate',label:'发出日期',type:'date',required:true},
-    {name:'returnDate',label:'预计返回',type:'date',required:true},
-    {name:'remark',label:'备注',type:'textarea'}
+  const fields = ['osId','vendorName','process','material','qty','unit','sendDate','expectReturn','status'];
+  const headers = ['委外单号','外协厂商','工序','物料','数量','单位','发出日期','计划回收','状态'];
+  document.getElementById('tabContent').innerHTML = renderListPage('委外管理', fields, headers, DB.outsourceOrders, 'production_outsource_p', [
+    {name:'vendorName',label:'外协厂商',type:'text',required:true},
+    {name:'process',label:'工序',type:'text',required:true},
+    {name:'qty',label:'数量',type:'number',required:true},
+    {name:'sendDate',label:'发出日期',type:'date',required:true},
+    {name:'expectReturn',label:'计划回收',type:'date',required:true}
   ]);
 }
 
 function renderProductionInboundContent() {
-  const fields = ['inboundId','planId','productName','quantity','inboundDate','inspector','qualifiedQty','status','remark'];
-  const headers = ['入库单号','生产计划','产品名称','数量','入库日期','质检员','合格数量','状态','备注'];
-  document.getElementById('tabContent').innerHTML = renderListPage('生产入库', fields, headers, DB.productionInbound, 'production_inbound_p', [
-    {name:'planId',label:'生产计划',type:'text',required:true},
-    {name:'productName',label:'产品名称',type:'text',required:true},
-    {name:'quantity',label:'数量',type:'number',required:true},
-    {name:'inboundDate',label:'入库日期',type:'date',required:true},
-    {name:'inspector',label:'质检员',type:'text'},
-    {name:'qualifiedQty',label:'合格数量',type:'number'},
-    {name:'remark',label:'备注',type:'textarea'}
+  const fields = ['inboundId','purchaseId','supplierName','materialName','qty','unit','inboundDate','operator','status','remark'];
+  const headers = ['入库单号','采购单号','供应商','物料名称','数量','单位','入库日期','操作员','状态','备注'];
+  document.getElementById('tabContent').innerHTML = renderListPage('生产入库', fields, headers, DB.purchaseInbound, 'production_inbound_p', [
+    {name:'purchaseId',label:'采购单号',type:'text',required:true},
+    {name:'materialName',label:'物料名称',type:'text',required:true},
+    {name:'qty',label:'数量',type:'number',required:true},
+    {name:'inboundDate',label:'入库日期',type:'date',required:true}
   ]);
 }
 
@@ -1546,11 +1589,11 @@ function renderProductionKanbanContent() {
     <!-- 看板视图 -->
     <div id="kanbanView">
       <div class="kanban-board">
-        ${['待生产','生产中','待发货','已完成'].map(status => `
+        ${['待确认','执行中','已派工','已完工'].map(status => `
           <div class="kanban-column">
             <div class="kanban-header ${status}">
               <span class="kanban-title">${status}</span>
-              <span class="kanban-count">${stats[status]}</span>
+              <span class="kanban-count">${stats[status] || 0}</span>
             </div>
             <div class="kanban-cards" id="kanban_${status}"></div>
           </div>`).join('')}
@@ -1583,39 +1626,40 @@ function renderProductionKanbanContent() {
       </div>
     </div>`;
 
-  // 填充看板卡片
-  ['待确认','执行中','已派工','已完成'].forEach(status => {
-    const orders = DB.productionPlans.filter(o => o.status === status);
-    document.getElementById(`kanban_${status}`).innerHTML = orders.map(o => `
-      <div class="kanban-card" onclick="viewProductionOrderDetail('${o.planId}')">
-        <div class="kc-top">
-          <span class="kc-id">${o.planId}</span>
-          <span class="kc-priority">${o.qty}${o.unit}</span>
-        </div>
-        <div class="kc-product">${o.productName}</div>
-        <div class="kc-meta">${o.orderId} · ${o.startDate} ~ ${o.endDate}</div>
-        <div class="kc-progress">
-          <div class="progress-bar"><div class="progress-fill" style="width:${o.progress}%"></div></div>
-          <span>${o.progress}%</span>
-        </div>
-      </div>`).join('') || '<div class="kanban-empty">暂无</div>';
-  });
+    // 看板列头（匹配 productionPlans.status）
+    const kanbanStatuses = ['待确认', '执行中', '已派工', '已完工'];
+    const kanbanLabels = { '待确认': '待确认', '执行中': '执行中', '已派工': '已派工', '已完工': '已完工' };
+    kanbanStatuses.forEach(status => {
+      const count = DB.productionPlans.filter(o => o.status === status).length;
+      document.getElementById(`kanban_${status}`).innerHTML = DB.productionPlans.filter(o => o.status === status).map(o => `
+        <div class="kanban-card" onclick="viewProductionOrderDetail('${o.planId}')">
+          <div class="kc-top">
+            <span class="kc-id">${o.planId}</span>
+            <span class="kc-priority">${o.qty}${o.unit}</span>
+          </div>
+          <div class="kc-product">${o.productName}</div>
+          <div class="kc-meta">${o.orderId} · ${o.startDate} ~ ${o.endDate}</div>
+          <div class="kc-progress">
+            <div class="progress-bar"><div class="progress-fill" style="width:${o.progress}%"></div></div>
+            <span>${o.progress}%</span>
+          </div>
+        </div>`).join('') || '<div class="kanban-empty">暂无</div>';
+    });
 
   // 填充甘特图行
   const ganttRows = document.getElementById('ganttRows');
   ganttRows.innerHTML = DB.productionPlans.map(plan => {
-    const barColor = plan.status === '已完成' ? '#10b981' : (plan.status === '执行中' || plan.status === '已派工' ? '#f59e0b' : '#3b82f6');
+    const barColor = plan.status === '已完工' ? '#10b981' : (plan.status === '执行中' || plan.status === '已派工' ? '#f59e0b' : (plan.status === '待确认' ? '#3b82f6' : '#94a3b8'));
     const startDate = new Date(plan.startDate === '-' ? today : plan.startDate);
     const endDate = new Date(plan.endDate);
     const startOffset = Math.max(0, Math.ceil((startDate - start) / 86400000));
     const duration = Math.max(1, Math.ceil((endDate - startDate) / 86400000));
     const left = startOffset * dayWidth;
     const width = duration * dayWidth;
-    const barColor = plan.status === '已完成' ? '#10b981' : (plan.status === '生产中' ? '#f59e0b' : '#3b82f6');
     return `<div class="gantt-row">
       <div class="gantt-label-col">${plan.planId}</div>
       <div class="gantt-label-col">${plan.productName.slice(0,8)}</div>
-      <div class="gantt-label-col">${plan.quantity}件</div>
+      <div class="gantt-label-col">${plan.qty}${plan.unit}</div>
       <div class="gantt-timeline-col">
         <div class="gantt-row-bg">${ganttDays.map(d => `<div class="gantt-day ${d.weekend?'weekend':''}" style="width:${dayWidth}%"></div>`).join('')}</div>
         <div class="gantt-bar-wrap" style="left:${left}%;width:${width}%">
@@ -1731,53 +1775,164 @@ function switchInventoryTab(tab) {
 }
 
 function renderInventoryStockContent() {
-  const fields = ['inventoryId','category','materialName','spec','quantity','unit','unitPrice','totalValue','location','remark'];
-  const headers = ['库存编号','类别','物料名称','规格','库存数量','单位','单价','库存价值','存放位置','备注'];
-  document.getElementById('tabContent').innerHTML = renderListPage('库存查询', fields, headers, DB.inventoryStock, 'inventory_stock', [
+  const fields = ['materialId','materialName','category','spec','dnSize','stockQty','unit','price'];
+  const headers = ['物料编码','物料名称','类别','规格','DN口径','当前库存','单位','单价'];
+  document.getElementById('tabContent').innerHTML = renderListPage('库存查询', fields, headers, DB.materials, 'inventory_stock', [
     {name:'materialName',label:'物料名称',type:'text',required:true},
     {name:'spec',label:'规格',type:'text',required:true},
-    {name:'quantity',label:'数量',type:'number',required:true},
+    {name:'stockQty',label:'数量',type:'number',required:true},
     {name:'unit',label:'单位',type:'text',required:true},
-    {name:'unitPrice',label:'单价',type:'number',required:true},
-    {name:'location',label:'存放位置',type:'text'},
-    {name:'remark',label:'备注',type:'textarea'}
+    {name:'price',label:'单价',type:'number',required:true}
   ]);
 }
 
 function renderInventoryInboundContent() {
-  const fields = ['recordId','inventoryId','materialName','spec','quantity','inboundDate','sourceType','sourceNo','handler','remark'];
-  const headers = ['记录编号','库存编号','物料名称','规格','数量','入库日期','来源类型','来源单号','经手人','备注'];
-  document.getElementById('tabContent').innerHTML = renderListPage('入库管理', fields, headers, DB.inventoryInbound, 'inventory_inbound', [
-    {name:'materialName',label:'物料名称',type:'text',required:true},
-    {name:'spec',label:'规格',type:'text',required:true},
-    {name:'quantity',label:'数量',type:'number',required:true},
-    {name:'inboundDate',label:'入库日期',type:'date',required:true},
-    {name:'sourceType',label:'来源类型',type:'select',options:['采购入库','生产入库','退货入库','其他']},
-    {name:'sourceNo',label:'来源单号',type:'text'},
-    {name:'handler',label:'经手人',type:'text'},
-    {name:'remark',label:'备注',type:'textarea'}
-  ]);
+  const fields = ['logId','bizType','bizNo','materialName','batchNo','changeQty','unit','afterQty','operatorTime','operator'];
+  const headers = ['记录编号','业务类型','来源单号','物料','批次','变动数量','单位','变动后库存','操作时间','操作员'];
+  const inboundLogs = DB.inventoryLogs.filter(l => l.bizType.includes('入库'));
+  document.getElementById('tabContent').innerHTML = renderListPage('入库管理', fields, headers, inboundLogs, 'inventory_inbound', []);
 }
 
 function renderInventoryOutboundContent() {
-  const fields = ['recordId','inventoryId','materialName','spec','quantity','outboundDate','targetType','targetNo','handler','remark'];
-  const headers = ['记录编号','库存编号','物料名称','规格','数量','出库日期','去向类型','去向单号','经手人','备注'];
-  document.getElementById('tabContent').innerHTML = renderListPage('出库管理', fields, headers, DB.inventoryOutbound, 'inventory_outbound_i', [
-    {name:'materialName',label:'物料名称',type:'text',required:true},
-    {name:'spec',label:'规格',type:'text',required:true},
-    {name:'quantity',label:'数量',type:'number',required:true},
-    {name:'outboundDate',label:'出库日期',type:'date',required:true},
-    {name:'targetType',label:'去向类型',type:'select',options:['生产领料','销售出库','其他']},
-    {name:'targetNo',label:'去向单号',type:'text'},
-    {name:'handler',label:'经手人',type:'text'},
-    {name:'remark',label:'备注',type:'textarea'}
-  ]);
+  const fields = ['logId','bizType','bizNo','materialName','batchNo','changeQty','unit','afterQty','operatorTime','operator'];
+  const headers = ['记录编号','业务类型','去向单号','物料','批次','变动数量','单位','变动后库存','操作时间','操作员'];
+  const outboundLogs = DB.inventoryLogs.filter(l => l.bizType.includes('领料') || l.bizType.includes('出库') || l.bizType.includes('退货'));
+  document.getElementById('tabContent').innerHTML = renderListPage('出库管理', fields, headers, outboundLogs, 'inventory_outbound_i', []);
 }
 
 function renderInventoryAlertContent() {
-  const fields = ['alertId','materialName','spec','currentStock','safetyStock','alertLevel','suggestion','createTime'];
-  const headers = ['预警编号','物料名称','规格','当前库存','安全库存','预警级别','处理建议','创建时间'];
-  document.getElementById('tabContent').innerHTML = renderListPage('库存预警', fields, headers, DB.inventoryAlerts, 'inventory_alert', []);
+  const lowStock = DB.materials.filter(m => m.stockQty < m.safeQty);
+  const expiring = DB.batchInventory ? DB.batchInventory.filter(b => b.status === '临期预警') : [];
+  const alerts = [
+    ...lowStock.map(m => ({
+      alertId: 'LOW-' + m.materialId,
+      materialName: m.materialName,
+      spec: m.spec || m.dnSize || '-',
+      currentStock: m.stockQty + m.unit,
+      safetyStock: m.safeQty + m.unit,
+      alertLevel: m.stockQty === 0 ? '紧急' : '警告',
+      suggestion: m.stockQty === 0 ? '立即补货' : '建议补充库存'
+    })),
+    ...expiring.map(b => ({
+      alertId: 'EXP-' + b.batchId,
+      materialName: b.materialName,
+      spec: b.batchNo,
+      currentStock: b.currentStock + b.unit,
+      safetyStock: '临期',
+      alertLevel: '提示',
+      suggestion: '优先使用，剩余' + b.currentStock + b.unit
+    }))
+  ];
+  const fields = ['alertId','materialName','spec','currentStock','safetyStock','alertLevel','suggestion'];
+  const headers = ['预警编号','物料名称','批次/规格','当前库存','安全库存','预警级别','处理建议'];
+  document.getElementById('tabContent').innerHTML = renderListPage('库存预警', fields, headers, alerts, 'inventory_alert', []);
+}
+
+// ================================================================
+// 模块6.5：质量管理
+// ================================================================
+function renderQuality() {
+  currentModule = 'quality';
+  currentQualityTab = 'inspect';
+  const content = document.getElementById('pageContent');
+  content.innerHTML = `
+    <div class="module-page">
+      <div class="module-tabs" id="qualityTabs">
+        <button class="tab-btn active" onclick="switchQualityTab('inspect')">检验记录</button>
+        <button class="tab-btn" onclick="switchQualityTab('ng')">不合格品</button>
+        <button class="tab-btn" onclick="switchQualityTab('standard')">检验标准</button>
+      </div>
+      <div id="tabContent"></div>
+    </div>`;
+  switchQualityTab('inspect');
+}
+
+function switchQualityTab(tab) {
+  currentQualityTab = tab;
+  document.querySelectorAll('#qualityTabs .tab-btn').forEach((b,i) => {
+    b.classList.toggle('active', ['inspect','ng','standard'][i] === tab);
+  });
+  switch (tab) {
+    case 'inspect': renderQualityInspectContent(); break;
+    case 'ng': renderQualityNgContent(); break;
+    case 'standard': renderQualityStandardContent(); break;
+  }
+}
+
+function renderQualityInspectContent() {
+  const fields = ['recordId','refType','stdId','checkQty','qualifiedQty','unqualifiedQty','inspector','checkDate','result'];
+  const headers = ['检验单号','来源类型','检验标准','检验数量','合格数','不合格数','检验员','检验日期','检验结果'];
+  document.getElementById('tabContent').innerHTML = renderListPage('检验记录', fields, headers, DB.inspectionRecords, 'quality_inspect', []);
+}
+
+function renderQualityNgContent() {
+  const fields = ['ngId','source','materialName','qty','reason','disposeType','handler','status'];
+  const headers = ['不合格单号','来源','物料/产品','数量','不合格原因','处置方式','处理人','状态'];
+  document.getElementById('tabContent').innerHTML = renderListPage('不合格品', fields, headers, DB.ngRecords, 'quality_ng', []);
+}
+
+function renderQualityStandardContent() {
+  const fields = ['stdId','stdName','scope','checkItem','stdValue','unit','method','refStandard'];
+  const headers = ['标准编号','标准名称','适用范围','检验项目','标准值','单位','检验方法','参考标准'];
+  document.getElementById('tabContent').innerHTML = renderListPage('检验标准', fields, headers, DB.inspectionStandards, 'quality_standard', []);
+}
+
+// ================================================================
+// 模块6.6：资源管理（设备/模具/工资）
+// ================================================================
+function renderResource() {
+  currentModule = 'resource';
+  currentResourceTab = 'equipment';
+  const content = document.getElementById('pageContent');
+  content.innerHTML = `
+    <div class="module-page">
+      <div class="module-tabs" id="resourceTabs">
+        <button class="tab-btn active" onclick="switchResourceTab('equipment')">设备台账</button>
+        <button class="tab-btn" onclick="switchResourceTab('mold')">模具台账</button>
+        <button class="tab-btn" onclick="switchResourceTab('wage')">计件工资</button>
+        <button class="tab-btn" onclick="switchResourceTab('cost')">成本核算</button>
+      </div>
+      <div id="tabContent"></div>
+    </div>`;
+  switchResourceTab('equipment');
+}
+
+function switchResourceTab(tab) {
+  currentResourceTab = tab;
+  document.querySelectorAll('#resourceTabs .tab-btn').forEach((b,i) => {
+    b.classList.toggle('active', ['equipment','mold','wage','cost'][i] === tab);
+  });
+  switch (tab) {
+    case 'equipment': renderResourceEquipmentContent(); break;
+    case 'mold': renderResourceMoldContent(); break;
+    case 'wage': renderResourceWageContent(); break;
+    case 'cost': renderResourceCostContent(); break;
+  }
+}
+
+function renderResourceEquipmentContent() {
+  const fields = ['eqId','eqName','model','workshop','purchaseDate','power','status','totalHours'];
+  const headers = ['设备编号','设备名称','型号','所属车间','购置日期','功率(kW)','状态','累计运行时长(h)'];
+  document.getElementById('tabContent').innerHTML = renderListPage('设备台账', fields, headers, DB.equipment, 'resource_equipment', []);
+}
+
+function renderResourceMoldContent() {
+  const fields = ['moldId','moldName','适用产品','material','totalLife','usedLife','remainLife','location','status'];
+  const headers = ['模具编号','模具名称','适用产品','材质','总寿命','已使用','剩余寿命','存放位置','状态'];
+  const moldData = DB.molds.map(m => ({...m, material: m.material, status: m.remainLife < 500 ? '预警' : m.status}));
+  document.getElementById('tabContent').innerHTML = renderListPage('模具台账', fields, headers, moldData, 'resource_mold', []);
+}
+
+function renderResourceWageContent() {
+  const fields = ['wageId','employee','reportRef','process','qualifiedQty','unitPrice','wage','date'];
+  const headers = ['工资单号','员工','报工单号','工序','合格数量','计件单价','工资','日期'];
+  document.getElementById('tabContent').innerHTML = renderListPage('计件工资', fields, headers, DB.pieceWageRecords, 'resource_wage', []);
+}
+
+function renderResourceCostContent() {
+  const fields = ['costId','orderId','productName','revenue','materialCost','laborCost','outsourceCost','overhead','totalCost','grossProfit','grossMargin'];
+  const headers = ['成本单号','订单号','产品/规格','收入','材料成本','人工成本','外协成本','制造费用','总成本','毛利','毛利率'];
+  document.getElementById('tabContent').innerHTML = renderListPage('成本核算', fields, headers, DB.costRecords, 'resource_cost', []);
 }
 
 function renderInventoryReportContent() {
@@ -1788,13 +1943,13 @@ function renderInventoryReportContent() {
       <div class="chart-card"><div class="chart-header"><h3>库龄分析</h3></div><div class="chart-body"><canvas id="invAgeChart"></canvas></div></div>
       <div class="chart-card full"><div class="chart-header"><h3>库存汇总</h3></div>
         <table class="data-table"><thead><tr><th>类别</th><th>物料数</th><th>总数量</th><th>总价值</th></tr></thead><tbody>
-          ${['钢材','防腐材料','保温材料','管件','紧固件'].map(cat => {
-            const items = DB.inventoryStock.filter(s=>s.category===cat);
-            const qty = items.reduce((a,b)=>a+b.quantity,0);
-            const val = items.reduce((a,b)=>a+b.totalValue,0);
+          ${['原材料','半成品','成品','辅材'].map(cat => {
+            const items = DB.materials.filter(s=>s.category===cat);
+            const qty = items.reduce((a,b)=>a+b.stockQty,0);
+            const val = items.reduce((a,b)=>a+b.stockQty*b.price,0);
             return `<tr><td>${cat}</td><td>${items.length}</td><td>${qty}</td><td class="money">¥${formatMoney(val)}</td></tr>`;
           }).join('')}
-          <tr style="font-weight:bold"><td>合计</td><td>${DB.inventoryStock.length}</td><td>${DB.inventoryStock.reduce((a,b)=>a+b.quantity,0)}</td><td class="money">¥${formatMoney(DB.inventoryStock.reduce((a,b)=>a+b.totalValue,0))}</td></tr>
+          <tr style="font-weight:bold"><td>合计</td><td>${DB.materials.length}</td><td>${DB.materials.reduce((a,b)=>a+b.stockQty,0)}</td><td class="money">¥${formatMoney(DB.materials.reduce((a,b)=>a+b.stockQty*b.price,0))}</td></tr>
         </tbody></table>
       </div>
     </div>`;
@@ -1847,48 +2002,44 @@ function switchFinanceTab(tab) {
 }
 
 function renderFinanceIncomeContent() {
-  const fields = ['recordId','direction','customerName','orderId','amount','paymentMethod','recordDate','handler','remark'];
-  const headers = ['记录编号','类型','客户','订单号','金额','收款方式','收款日期','经手人','备注'];
-  document.getElementById('tabContent').innerHTML = renderListPage('收入登记', fields, headers, DB.financeIncome, 'finance_income', [
+  const fields = ['paymentId','customerName','amount','paymentDate','arRef','paidAmount','paymentMethod'];
+  const headers = ['收款单号','客户','收款金额','收款日期','关联应收单','核销金额','收款方式'];
+  document.getElementById('tabContent').innerHTML = renderListPage('收入登记', fields, headers, DB.paymentRecords, 'finance_income', [
     {name:'customerName',label:'客户名称',type:'text',required:true},
-    {name:'orderId',label:'订单号',type:'text',required:true},
-    {name:'amount',label:'金额',type:'number',required:true},
-    {name:'paymentMethod',label:'收款方式',type:'select',options:['银行转账','现金','支票','其他']},
-    {name:'recordDate',label:'收款日期',type:'date',required:true},
-    {name:'handler',label:'经手人',type:'text'},
-    {name:'remark',label:'备注',type:'textarea'}
+    {name:'amount',label:'收款金额',type:'number',required:true},
+    {name:'paymentDate',label:'收款日期',type:'date',required:true},
+    {name:'paymentMethod',label:'收款方式',type:'select',options:['银行转账','电汇','银行承兑','现金','其他']}
   ]);
 }
 
 function renderFinanceExpenseContent() {
-  const fields = ['recordId','direction','supplierName','orderId','amount','paymentMethod','recordDate','handler','remark'];
-  const headers = ['记录编号','类型','供应商','订单号','金额','付款方式','付款日期','经手人','备注'];
-  document.getElementById('tabContent').innerHTML = renderListPage('支出登记', fields, headers, DB.financeExpense, 'finance_expense', [
-    {name:'supplierName',label:'供应商',type:'text',required:true},
-    {name:'orderId',label:'订单号',type:'text',required:true},
+  const fields = ['expId','expType','expItem','amount','expDate','remark'];
+  const headers = ['费用单号','费用类型','费用项目','金额','日期','备注'];
+  document.getElementById('tabContent').innerHTML = renderListPage('支出登记', fields, headers, DB.expenseRecords, 'finance_expense', [
+    {name:'expType',label:'费用类型',type:'select',options:['水电费','运输费','维修费','办公费','检测费','劳保费','培训费','招待费','模具费','认证费','其他'],required:true},
+    {name:'expItem',label:'费用项目',type:'text',required:true},
     {name:'amount',label:'金额',type:'number',required:true},
-    {name:'paymentMethod',label:'付款方式',type:'select',options:['银行转账','现金','支票','其他']},
-    {name:'recordDate',label:'付款日期',type:'date',required:true},
-    {name:'handler',label:'经手人',type:'text'},
+    {name:'expDate',label:'日期',type:'date',required:true},
     {name:'remark',label:'备注',type:'textarea'}
   ]);
 }
 
 function renderFinanceReceivableContent() {
-  const fields = ['receivableId','customerName','orderId','amount','paidAmount','balanceAmount','dueDate','overdueDays','status','remark'];
-  const headers = ['应收单号','客户','订单号','应收金额','已收金额','应收余额','到期日','超期天数','状态','备注'];
-  document.getElementById('tabContent').innerHTML = renderListPage('应收账款', fields, headers, DB.financeReceivable.filter(r=>r.direction==='应收'), 'finance_receivable', []);
+  const fields = ['arId','customerName','orderId','totalAmount','paidAmount','unpaidAmount','dueDate','status'];
+  const headers = ['应收单号','客户','订单号','应收总额','已收','未收款','到期日','状态'];
+  document.getElementById('tabContent').innerHTML = renderListPage('应收账款', fields, headers, DB.receivable, 'finance_receivable', []);
 }
 
 function renderFinancePayableContent() {
-  const fields = ['payableId','supplierName','orderId','amount','paidAmount','balanceAmount','dueDate','overdueDays','status','remark'];
-  const headers = ['应付单号','供应商','订单号','应付金额','已付金额','应付余额','到期日','超期天数','状态','备注'];
-  document.getElementById('tabContent').innerHTML = renderListPage('应付账款', fields, headers, DB.financePayable, 'finance_payable', []);
+  // 应付账款暂无独立数据，使用采购在途作为展示
+  const fields = ['purchaseId','supplierName','amount','expectDate','buyer','status'];
+  const headers = ['采购单号','供应商','应付金额','预计付款','采购员','状态'];
+  document.getElementById('tabContent').innerHTML = renderListPage('应付账款', fields, headers, DB.purchaseOrders, 'finance_payable', []);
 }
 
 function renderFinanceReportContent() {
-  const totalIncome = DB.financeIncome.reduce((a,b)=>a+b.amount,0);
-  const totalExpense = DB.financeExpense.reduce((a,b)=>a+b.amount,0);
+  const totalIncome = DB.paymentRecords.reduce((a,b)=>a+b.amount,0);
+  const totalExpense = DB.expenseRecords.reduce((a,b)=>a+b.amount,0);
   const netProfit = totalIncome - totalExpense;
   document.getElementById('pageContent').innerHTML = `
     <div class="filter-bar"><div class="filter-item"><h2 class="page-title">财务报表</h2></div></div>
@@ -1923,6 +2074,8 @@ function renderFinanceReportContent() {
 // ================================================================
 function renderReport() {
   currentModule = 'report';
+  const totalRevenue = DB.salesOrders.reduce((a,b)=>a+b.totalAmount,0);
+  const overdueAR = DB.receivable.filter(r=>r.status==='已逾期').reduce((a,b)=>a+b.unpaidAmount,0);
   const content = document.getElementById('pageContent');
   content.innerHTML = `
     <div class="dashboard boss-dashboard">
@@ -1931,14 +2084,14 @@ function renderReport() {
         <span class="boss-date">数据更新：${new Date().toLocaleDateString('zh-CN')}</span>
       </div>
       <div class="boss-kpis">
-        <div class="kpi-card"><div class="kpi-val">¥328.5<span>万</span></div><div class="kpi-label">本月销售额</div><div class="kpi-trend up">↑12.3%</div></div>
-        <div class="kpi-card"><div class="kpi-val">¥86.2<span>万</span></div><div class="kpi-label">本月采购额</div><div class="kpi-trend down">↓3.1%</div></div>
-        <div class="kpi-card"><div class="kpi-val">¥242.3<span>万</span></div><div class="kpi-label">毛利润</div><div class="kpi-trend up">↑8.7%</div></div>
-        <div class="kpi-card"><div class="kpi-val">¥52.3<span>万</span></div><div class="kpi-label">应收账款</div><div class="kpi-trend warn">⚠ 超期12.5万</div></div>
-        <div class="kpi-card"><div class="kpi-val">¥18.6<span>万</span></div><div class="kpi-label">应付账款</div><div class="kpi-trend normal">正常</div></div>
-        <div class="kpi-card"><div class="kpi-val">89.2<span>%</span></div><div class="kpi-label">订单完成率</div><div class="kpi-trend up">↑2.1%</div></div>
-        <div class="kpi-card"><div class="kpi-val">7.4<span>h</span></div><div class="kpi-label">平均工时/件</div><div class="kpi-trend down">↓0.3h</div></div>
-        <div class="kpi-card"><div class="kpi-val">156</div><div class="kpi-label">本月订单数</div><div class="kpi-trend up">↑8.5%</div></div>
+        <div class="kpi-card blue"><div class="kpi-name">本月营收</div><div class="kpi-value">¥${(totalRevenue/10000).toFixed(1)}万</div><div class="kpi-meta">${DB.kpis[0] ? '环比'+(DB.kpis[0].mom>0?'↑':'↓')+Math.abs(DB.kpis[0].mom)+'%' : ''}</div></div>
+        <div class="kpi-card green"><div class="kpi-name">本月净利润</div><div class="kpi-value">${DB.kpis[1] ? DB.kpis[1].currentValue : '-'}</div><div class="kpi-meta">${DB.kpis[1] && DB.kpis[1].mom !== '-' ? '环比'+(DB.kpis[1].mom>0?'↑':'↓')+Math.abs(DB.kpis[1].mom)+'%' : ''}</div></div>
+        <div class="kpi-card amber"><div class="kpi-name">一次合格率</div><div class="kpi-value">${DB.kpis[4] ? DB.kpis[4].currentValue : '-'}</div><div class="kpi-meta">${DB.kpis[4] ? '目标'+DB.kpis[4].targetValue+'% 达成'+DB.kpis[4].achieveRate+'%' : ''}</div></div>
+        <div class="kpi-card red"><div class="kpi-name">逾期应收</div><div class="kpi-value">¥${(overdueAR/10000).toFixed(1)}万</div><div class="kpi-meta">${DB.kpis[5] ? '目标'+DB.kpis[5].targetValue : ''}</div></div>
+        <div class="kpi-card green"><div class="kpi-name">设备OEE</div><div class="kpi-value">${DB.kpis[7] ? DB.kpis[7].currentValue : '-'}</div><div class="kpi-meta">${DB.kpis[7] ? '达成'+DB.kpis[7].achieveRate+'%' : ''}</div></div>
+        <div class="kpi-card amber"><div class="kpi-name">库存周转天数</div><div class="kpi-value">${DB.kpis[6] ? DB.kpis[6].currentValue : '-'}天</div><div class="kpi-meta">${DB.kpis[6] ? '目标'+DB.kpis[6].targetValue+'天' : ''}</div></div>
+        <div class="kpi-card blue"><div class="kpi-name">今日在产订单</div><div class="kpi-value">${DB.kpis[8] ? DB.kpis[8].currentValue : '-'}</div><div class="kpi-meta">张</div></div>
+        <div class="kpi-card red"><div class="kpi-name">低库存预警</div><div class="kpi-value">${DB.kpis[10] ? DB.kpis[10].currentValue : '-'}</div><div class="kpi-meta">项物料</div></div>
       </div>
       <div class="boss-charts">
         <div class="chart-card"><div class="chart-header"><h3>年度销售趋势</h3></div><div class="chart-body"><canvas id="bossSalesChart"></canvas></div></div>
@@ -1948,6 +2101,8 @@ function renderReport() {
       </div>
     </div>`;
   setTimeout(() => {
+    const kpiMap = {};
+    DB.kpis.forEach(k => kpiMap[k.kpiName] = k);
     new Chart(document.getElementById('bossSalesChart'), {
       type:'line',
       data:{labels:['1月','2月','3月','4月','5月','6月','7月','8月','9月','10月','11月','12月'],
@@ -1957,17 +2112,17 @@ function renderReport() {
     });
     new Chart(document.getElementById('bossProductChart'), {
       type:'doughnut',
-      data:{labels:DB.products.map(p=>p.productName),datasets:[{data:DB.products.map((_,i)=>[38,25,18,12,7][i]),backgroundColor:['#1a6ef5','#10b981','#f59e0b','#8b5cf6','#ef4444'],borderWidth:0}]},
+      data:{labels:DB.products.slice(0,5).map(p=>p.productName.slice(0,8)),datasets:[{data:DB.products.slice(0,5).map((_,i)=>[38,25,18,12,7][i]),backgroundColor:['#1a6ef5','#10b981','#f59e0b','#8b5cf6','#ef4444'],borderWidth:0}]},
       options:{responsive:true,maintainAspectRatio:false}
     });
     new Chart(document.getElementById('bossCustomerChart'), {
       type:'bar',
-      data:{labels:['振华化工','XX市政','华北石化','东方管道','其他'].slice(0,5),datasets:[{label:'销售额(万)',data:[85,62,48,35,98.5],backgroundColor:'rgba(26,110,245,0.7)',borderRadius:4}]},
+      data:{labels:DB.customers.slice(0,5).map(c=>c.customerName.slice(0,6)),datasets:[{label:'信用额度(万)',data:DB.customers.slice(0,5).map(c=>c.creditLimit/10000),backgroundColor:'rgba(26,110,245,0.7)',borderRadius:4}]},
       options:{indexAxis:'y',responsive:true,maintainAspectRatio:false}
     });
     new Chart(document.getElementById('bossInvChart'), {
       type:'bar',
-      data:{labels:['钢材','防腐材料','保温材料','管件','紧固件'],datasets:[{label:'月采购额(万)',data:[28,12,10,8,6],backgroundColor:'rgba(245,158,11,0.7)',borderRadius:4},{label:'库存价值(万)',data:[120,48,36,30,24],backgroundColor:'rgba(26,110,245,0.7)',borderRadius:4}]},
+      data:{labels:['原材料','半成品','成品','辅材'],datasets:[{label:'采购额(万)',data:[28,12,10,8],backgroundColor:'rgba(245,158,11,0.7)',borderRadius:4},{label:'库存价值(万)',data:[24,15,45,8],backgroundColor:'rgba(26,110,245,0.7)',borderRadius:4}]},
       options:{responsive:true,maintainAspectRatio:false}
     });
   }, 50);
