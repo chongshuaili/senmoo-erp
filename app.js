@@ -189,7 +189,7 @@ function renderSidebar() {
       html += `<div class="nav-group">`;
       if (mod.groups[0].label) {
         html += `<div class="nav-group-title" onclick="toggleGroup(this)">
-          ${mod.name}
+          <span class="group-label">${mod.name}</span>
           <svg class="group-arrow" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
         </div>`;
       }
@@ -2042,7 +2042,16 @@ function doLogout() { logout(); }
 
 function toggleSidebar() {
   const sidebar = document.getElementById('sidebarNav');
-  if (sidebar) sidebar.classList.toggle('collapsed');
+  const overlay = document.getElementById('sidebarOverlay');
+  const isMobile = window.innerWidth <= 768;
+  if (sidebar) {
+    if (isMobile) {
+      sidebar.classList.toggle('mobile-open');
+      if (overlay) overlay.classList.toggle('show');
+    } else {
+      sidebar.classList.toggle('collapsed');
+    }
+  }
 }
 
 function toggleUserMenu() {
