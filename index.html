@@ -24,6 +24,10 @@
     </div>
     <div class="login-form">
       <div class="form-item">
+        <label>租户编码</label>
+        <input type="text" id="loginTenant" value="SENMOO001" placeholder="请输入租户编码">
+      </div>
+      <div class="form-item">
         <label>用户名</label>
         <input type="text" id="loginUser" value="admin" placeholder="请输入用户名">
       </div>
@@ -46,6 +50,34 @@
       <button class="login-btn" onclick="doLogin()">登 录 系 统</button>
       <p class="login-hint">演示账号：admin / 123456</p>
     </div>
+  </div>
+</div>
+
+<!-- ============ 租户选择页 ============ -->
+<div id="tenantPage" class="tenant-page" style="display:none">
+  <div class="tenant-header">
+    <div class="tenant-logo-icon">
+      <svg width="24" height="24" viewBox="0 0 48 48" fill="none">
+        <path d="M10 36L16 12H22L28 36H22.8L21.6 31H16.4L15.2 36H10ZM16.5 26.5H21.5L20 21.5L16.5 26.5Z" fill="white"/>
+        <rect x="29" y="12" width="8" height="24" fill="white" opacity="0.9"/>
+      </svg>
+    </div>
+    <div>
+      <h2 class="tenant-title">选择企业账号</h2>
+      <p class="tenant-sub">多企业隔离 · 数据独立 · 云端SaaS管理</p>
+    </div>
+  </div>
+  <p class="tenant-tip">当前租户：<span id="currentTenantCode" class="tenant-code">—</span></p>
+  <div class="tenant-list" id="tenantList"></div>
+  <div class="tenant-add">
+    <p class="tenant-add-tip">没有找到？新建企业账号</p>
+    <div class="tenant-add-form">
+      <input type="text" id="newTenantName" placeholder="输入企业名称">
+      <button class="tenant-add-btn" onclick="createTenant()">创建并进入</button>
+    </div>
+  </div>
+  <div class="tenant-back">
+    <button class="tenant-back-btn" onclick="backToLogin()">← 返回登录</button>
   </div>
 </div>
 
