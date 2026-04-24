@@ -1,9 +1,9 @@
 {
-  "framework": null,
-  "buildCommand": null,
-  "outputDirectory": ".",
-  "installCommand": null,
+  "framework": static,
+  "buildCommand": "exit 0",
+  "installCommand": "exit 0",
   "devCommand": null,
+  "outputDirectory": ".",
   "rewrites": [
     {
       "source": "/(.*)",
